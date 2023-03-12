@@ -1,0 +1,68 @@
+---
+title: "An example of implementing the code"
+author: "Xiuwen Duan, Mayer Alvo"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Given a list of observed samples, we generate the compatible sets for each observation in this sample. Then use the compatible set to estimate the full ranking for the observations. 
+
+Firstly, suppose we are given in observations of 4 incomplete rankings: (you can input your own data here)
+```{r }
+observation<-matrix(c(1,2,3,4,0,
+                      1,3,2,0,0,
+                      4,2,0,3,1,
+                      0,0,3,2,1),4,5,byrow=T)
+```
+
+Alternatively, one can import the data from a csv or txt file.
+```{r }
+observation<-as.matrix(read.csv("observation1.csv",header=FALSE))
+observation<-as.matrix(read.table("observation2.txt"))
+```
+
+Then, we load the algorithms to generate the compatible set.
+```{r }
+source("Compatible.R")
+```
+
+Use the function "two_stage_complete" to generate compatible sets.
+```{r }
+Compatible<-list()
+for(i in 1:nrow(observation)){
+  Compatible[[i]]<-Two_stage_complete(observation[i,])
+}
+```
+
+So the compatible set now contains n=3 matrices each contains all permutations for each of above rankings.
+```{r }
+Compatible
+```
+
+Next, we standardize the data.
+```{r}
+t<-ncol(observation)
+for(i in 1:nrow(observation)){
+  Compatible[[i]]<-Compatible[[i]]-mean(c(1:t))
+  mod<-sqrt(t*(t^2-1)/12)
+  Compatible[[i]]<-Compatible[[i]]/mod
+}
+```
+
+Then we load the EM algorithm and make estimates with a specified stopping criterion. It will give us result of the mean vector $\mu$, normalizing parameter $\kappa$, and the probability of the predicted $\mu$. We set the stopping parameter $\epsilon$ to be 0.1 to avoid computational problems when running too many times. 
+```{r }
+source("EM.R")
+result<-EM(observation,Compatible,0.1,20)
+result
+```
+
+In the end, we can rank the mean vector to see the predicted overall ranking of this sample.
+```{r }
+rank(result$mu)
+```
